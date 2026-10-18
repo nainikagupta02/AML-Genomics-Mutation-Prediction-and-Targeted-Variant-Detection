@@ -1,5 +1,74 @@
 # AML Genomics: Mutation Prediction and Targeted Variant Detection
 
+## Introduction
+
+Acute myeloid leukemia (AML) is driven by genetic changes that alter how
+blood cells grow and mature. This project asks two connected questions.
+First, can gene-expression patterns alone predict whether an AML sample
+carries one of two clinically important mutations, FLT3-ITD or NPM1 —
+without directly sequencing the mutation itself? Second, can a lightweight,
+laptop-scale sequencing workflow correctly recover known mutations and gene
+fusions directly from raw reads, as a check that such tooling works before
+trusting it on anything unknown? The two are complementary: expression
+prediction can pick up a biological signature even when a mutation itself is
+hard to call directly, while direct sequencing gives more literal evidence of
+the actual DNA/RNA change.
+
+## Methods, in short
+
+**Project 1 — mutation prediction from expression** (`beataml_modeling/`,
+`tcga_laml_validation/`). Two separate binary classifiers (one per mutation)
+were trained on 445 BEAT-AML RNA-seq specimens from 443 patients (FLT3-ITD:
+106 positive/339 negative; NPM1: 125 positive/320 negative). Every split —
+the 80/20 development/held-out partition and every cross-validation fold —
+is grouped by patient ID, so no patient's specimens ever appear on both sides
+of a split. Preprocessing (CPM + log1p normalization, a low-expression/
+variance gene filter capped at 5,000 genes, standardization) is refit from
+scratch on each fold's training rows only. Four model families were compared
+by 5-fold × 3-repeat cross-validation (majority baseline, a 7-gene literature
+marker panel, elastic-net logistic regression, random forest); the winning
+family per target was fitted once on the full development set, evaluated
+exactly once on the untouched held-out set, and then — completely frozen, no
+retraining or recalibration — evaluated once more on an independent cohort of
+151 TCGA-LAML patients.
+
+**Project 2 — targeted variant/fusion recovery** (`aml_variant_demo/`). A
+Nextflow pipeline tests whether known AML abnormalities can be correctly
+recovered from public cell-line sequencing data (DepMap), using region-only
+downloads rather than whole-genome/transcriptome data. Expected results were
+written down before running anything: MV4-11 (known FLT3-ITD-positive) and
+KASUMI-1 (a required FLT3-ITD-negative control) were tested with getITD;
+KASUMI-1 (known RUNX1–RUNX1T1-positive) and NB-4 (known PML–RARA-positive)
+were tested with kallisto + pizzly fusion detection.
+
+## Results and interpretation, in short
+
+**Project 1.** The elastic-net model was the strongest family for both
+targets in cross-validation (FLT3-ITD: AUROC 0.925, AUPRC 0.860; NPM1: AUROC
+0.976, AUPRC 0.970 — vs. a majority-baseline floor of AUROC 0.500 for both).
+On the untouched BEAT-AML held-out set: FLT3-ITD AUROC 0.879, AUPRC 0.851;
+NPM1 AUROC 0.999, AUPRC 0.997. On the frozen external TCGA-LAML evaluation:
+FLT3-ITD AUROC 0.873 (95% CI 0.779–0.948), AUPRC 0.738; NPM1 AUROC 0.964 (95%
+CI 0.900–0.998), AUPRC 0.949. **Interpretation:** NPM1's expression signature
+generalized strongly to an independent cohort. FLT3-ITD retained good ranking
+ability externally (AUROC barely moved), but its sensitivity at the
+fixed 0.50 threshold dropped more — consistent with a shift in score
+distribution between cohorts, not a failure of the model's ranking itself.
+Neither result is a clinical diagnostic claim; both are feasibility evidence
+from one training cohort and one external cohort, with wide confidence
+intervals given the ~34–38 positive patients available in TCGA.
+
+**Project 2.** All four preregistered checks passed: MV4-11 showed a 30-bp
+FLT3-ITD at 23.077% VAF with 6 supporting reads, while KASUMI-1's required
+negative control stayed negative; KASUMI-1's RUNX1–RUNX1T1 fusion was
+recovered with 199 split + 1 paired supporting records, and NB-4's PML–RARA
+fusion with 65 split records. **Interpretation:** this is a known-positive
+recovery exercise on cell lines whose genetics were already published, not a
+sensitivity/specificity estimate — it demonstrates that the workflow and
+tools correctly re-find answers that are already known, which is a
+precondition for ever trusting them on an unknown sample, not a result about
+unknown samples themselves.
+
 ## Projects
 
 - **[`beataml_modeling/`](beataml_modeling/)** — Patient-grouped elastic-net
