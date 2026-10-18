@@ -30,16 +30,6 @@ Built now:
   CV, the BEAT-AML held-out partition, and the TCGA-LAML external cohort (the
   TCGA comparison is the cleanest one — see caveats below).
 
-- **Containerized API** (`api/`) — a FastAPI service wrapping the frozen
-  elastic-net pipelines (`POST /predict/{target}`), with the same
-  out-of-distribution heuristic as `monitor.py` built in. Built and run
-  locally as a Docker image; verified end-to-end against real TCGA-LAML
-  samples through the running container (see `api/README.md`).
-- **AWS deployment config** (`deploy/aws/`) — Terraform for an ECR repo + App
-  Runner service to run that image. **Not applied** — see
-  `deploy/aws/README.md` for the manual build/push/apply steps and cost
-  before doing so.
-
 ## Run
 
 From this directory, with the frozen `develop`+`finalize` phases of
@@ -56,8 +46,7 @@ python3 torch_model.py   # ~1-2 minutes on CPU; refuses to rerun its locked held
 
 `log_models.py` writes to a local file-based MLflow store at `./mlruns`; browse
 it with `mlflow ui --backend-store-uri file://$(pwd)/mlruns`. The rest write to
-`./results/`. For the API, see `api/README.md`; for the (unapplied) AWS config,
-see `deploy/aws/README.md`.
+`./results/`.
 
 ## Notes and limitations
 

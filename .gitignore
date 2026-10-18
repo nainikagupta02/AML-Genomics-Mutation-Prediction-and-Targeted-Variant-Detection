@@ -33,4 +33,3 @@ beataml_modeling/results/counts_input.npy
 
 # Regenerable copies/caches within beataml_mlops (see beataml_mlops/README.md)
 beataml_mlops/mlruns/
-beataml_mlops/api/artifacts/
